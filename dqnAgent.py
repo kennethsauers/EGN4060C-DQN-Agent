@@ -5,8 +5,10 @@ import numpy as np
 from collections import deque
 
 from dataLogger import Logger
+import datetime
+import os
 
-from tensorflow.keras.models import Sequential
+from tensorflow.keras.models import Sequential, load_model
 from tensorflow.keras.layers import Dense, Dropout
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.callbacks import TensorBoard
@@ -15,6 +17,10 @@ TensorBoard(log_dir='Graph', histogram_freq=0,write_graph=True, write_images=Tru
 
 
 ENV_NAME = "CartPole-v1"
+MODEL_SAVE_DIR = 'Model/'
+
+if not os.path.exists(MODEL_SAVE_DIR):
+    os.makedirs(MODEL_SAVE_DIR)
 
 GAMMA = 0.95
 LEARNING_RATE = 0.001
@@ -45,7 +51,15 @@ class DQNSolver:
         self.model.add(Dropout(DROPOUT_RATE))
         self.model.add(Dense(self.action_space, activation="linear"))
         self.model.compile(loss="mse", optimizer=Adam(lr=LEARNING_RATE))
+        self.model.summary()
         #self.tensorboard = TensorBoard(log_dir='Graph', histogram_freq=0, write_graph=True, write_images=True)
+
+    def save(self, filename ='test'):
+        self.model.save(MODEL_SAVE_DIR + str(filename) + '.h5')
+
+    def load(self, filename='test'):
+        self.model = load_model(MODEL_SAVE_DIR + filename + '.h5')
+
     def remember(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
 
@@ -77,6 +91,7 @@ def cartpole():
     observation_space = env.observation_space.shape[0]
     action_space = env.action_space.n
     dqn_solver = DQNSolver(observation_space, action_space)
+    dqn_solver.load()
     run = 0
     while True:
         run += 1
@@ -93,9 +108,10 @@ def cartpole():
             dqn_solver.remember(state, action, reward, state_next, terminal)
             state = state_next
             if terminal:
-                logger.log(reward)
+                logger.log(step)
                 if run % 10 is 0:
-                    logger.plot()
+                    dqn_solver.save()
+                    logger.plot(file = 'testing')
                 print("Run: " + str(run) + ", exploration: " + str(dqn_solver.exploration_rate) + ", score: " + str(step))
                 break
             dqn_solver.experience_replay()
