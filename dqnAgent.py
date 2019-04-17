@@ -5,6 +5,8 @@ import numpy as np
 from collections import deque
 
 from dataLogger import Logger
+from gifMaker import GifMaker
+
 import datetime
 import os
 
@@ -45,9 +47,9 @@ class DQNSolver:
         self.memory = deque(maxlen=MEMORY_SIZE)
 
         self.model = Sequential()
-        self.model.add(Dense(256, input_shape=(observation_space,), activation="relu"))
+        self.model.add(Dense(32, input_shape=(observation_space,), activation="relu"))
         self.model.add(Dropout(DROPOUT_RATE))
-        self.model.add(Dense(256, activation="relu"))
+        self.model.add(Dense(32, activation="relu"))
         self.model.add(Dropout(DROPOUT_RATE))
         self.model.add(Dense(self.action_space, activation="linear"))
         self.model.compile(loss="mse", optimizer=Adam(lr=LEARNING_RATE))
@@ -87,6 +89,7 @@ class DQNSolver:
 # REVIEW:
 # logger.reward not logging data`
 def cartpole():
+    maker = GifMaker()
     env = gym.make(ENV_NAME)
     observation_space = env.observation_space.shape[0]
     action_space = env.action_space.n
@@ -107,8 +110,12 @@ def cartpole():
             state_next = np.reshape(state_next, [1, observation_space])
             dqn_solver.remember(state, action, reward, state_next, terminal)
             state = state_next
+            env.render()
+            maker.log(env.unwrapped.viewer.get_array())
             if terminal:
                 logger.log(step)
+                maker.makeGif(filename = str(run))
+
                 if run % 10 is 0:
                     dqn_solver.save()
                     logger.plot(file = 'testing')
